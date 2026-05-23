@@ -1,0 +1,16 @@
+{
+  "name": "social-games-imposter",
+  "version": "1.0.0",
+  "description": "A single-device local party game: Imposter.",
+  "scripts": {
+    "dev": "npx http-server -p 3000"
+  },
+  "keywords": [
+    "party-game",
+    "imposter",
+    "social-deduction",
+    "local-multiplayer"
+  ],
+  "author": "",
+  "license": "ISC"
+}
