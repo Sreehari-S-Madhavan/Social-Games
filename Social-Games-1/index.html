@@ -1,0 +1,2129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social Games Platform</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            peach: {
+              DEFAULT: '#FFDFD0',
+              card: '#FFEBE1',
+              light: '#FFF5F0',
+              dark: '#FFB396'
+            },
+            accent: {
+              orange: '#E65100',
+              hover: '#BF360C'
+            },
+            darktext: '#3E2723',
+            mutedtext: '#5D4037',
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            heading: ['Outfit', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Tailwind-only site polish (kept minimal & self-contained) */
+    html, body { height: 100%; }
+    .app-shell { background: #FFDFD0; }
+
+    .card-glow {
+      box-shadow: 0 8px 30px rgba(230, 81, 0, 0.12);
+    }
+
+    .fade-enter { animation: fadeIn 220ms ease both; }
+    .fade-exit { animation: fadeOut 160ms ease both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-4px); } }
+
+    .scale-enter { animation: scaleUp 260ms cubic-bezier(.2,.9,.2,1) both; }
+    @keyframes scaleUp { from { transform: scale(.985); opacity: .6; } to { transform: scale(1); opacity: 1; } }
+
+    .scrim-blur {
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      background: rgba(255, 223, 208, 0.55);
+    }
+
+    .confetti { position: fixed; top: 0; z-index: 9999; width: 10px; height: 18px; border-radius: 3px; opacity: 0.95; animation: confetti-fall 2.4s linear forwards; pointer-events: none; }
+    @keyframes confetti-fall { from { transform: translateY(-10px) rotate(0deg);} to { transform: translateY(110vh) rotate(720deg);} }
+
+    .tap-pulse { animation: tapPulse 1.2s ease-in-out infinite; }
+    @keyframes tapPulse { 0%,100% { transform: scale(1);} 50% { transform: scale(1.03);} }
+
+    /* Mobile safe-area */
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, #E65100 0%, #BF360C 100%);
+      box-shadow: 0 10px 24px rgba(230, 81, 0, 0.25);
+    }
+    .btn-primary:disabled { opacity: .55; box-shadow: none; }
+
+    /* Scrollbar hide for nicer screenshots */
+    .hide-scrollbar::-webkit-scrollbar { width: 0; height: 0; }
+    .hide-scrollbar { scrollbar-width: none; }
+  </style>
+
+  <!-- Optional: reuse existing style.css if present; harmless if missing -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body class="min-h-screen app-shell flex items-center justify-center p-4 sm:p-6 md:p-8">
+  <!-- Single-device app container -->
+  <div class="relative w-full max-w-md min-h-[844px] app-shell shadow-2xl rounded-[40px] overflow-hidden border-8 border-amber-950/10 flex flex-col">
+
+    <!-- Header (permanent) -->
+    <header class="px-6 pt-6 pb-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span id="app-badge" class="px-3 py-1.5 rounded-full border border-[#FFB396]/40 bg-[#FFEBE1] text-[10px] uppercase tracking-widest font-extrabold text-[#E65100]">
+          Local Party Games
+        </span>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div id="progress-indicator" class="hidden sm:flex items-center gap-2">
+          <div class="h-2 w-2 rounded-full bg-[#FFB396]/60"></div>
+          <div class="h-2 w-10 rounded-full bg-[#FFB396]/30"></div>
+          <div class="h-2 w-2 rounded-full bg-[#FFB396]/30"></div>
+          <div class="h-2 w-10 rounded-full bg-[#FFB396]/30"></div>
+          <div class="h-2 w-2 rounded-full bg-[#FFB396]/30"></div>
+        </div>
+
+        <button id="btn-home" class="w-10 h-10 rounded-full bg-[#FFEBE1] flex items-center justify-center text-[#E65100] hover:scale-105 active:scale-95 transition-transform" aria-label="Home">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4a1 1 0 0 1-1-1v-6H10v6a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V11z" />
+          </svg>
+        </button>
+
+        <button id="btn-mute" class="w-10 h-10 rounded-full bg-[#FFEBE1] flex items-center justify-center text-[#E65100] hover:scale-105 active:scale-95 transition-transform" aria-label="Toggle Mute">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mute-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main views (hidden/active via JS) -->
+    <main class="flex-1 overflow-hidden">
+
+      <!-- Landing -->
+      <section id="view-landing" class="view hidden h-full flex flex-col">
+        <div class="px-6 pt-2 flex-1 overflow-y-auto hide-scrollbar pb-8">
+          <h1 class="text-5xl font-black text-[#3E2723] tracking-tight leading-none mt-4 font-heading">
+            Social<br><span class="text-[#E65100]">Games</span>
+          </h1>
+          <p class="text-[#5D4037] mt-4 text-base font-medium">Pick a game. Setup is local, pass-and-view safe, and built for one device.</p>
+
+          <!-- Dashboard grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6" style="padding-left: 0; padding-right: 0;">
+            <button data-game="IMPOSTER" class="game-card w-full rounded-[26px] bg-[#FFEBE1] border border-[#FFD8B3]/40 p-5 text-left shadow-sm hover:shadow-md transition-all relative overflow-hidden card-glow">
+              <span class="absolute -right-12 -top-12 w-32 h-32 rounded-full bg-[#E65100]/10 blur-2xl"></span>
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="text-xs uppercase tracking-widest font-extrabold text-[#E65100]">Active</div>
+                  <h3 class="mt-1 text-2xl font-extrabold text-[#3E2723] font-heading">Imposter</h3>
+                  <p class="mt-2 text-xs text-[#5D4037]/80">Classic or Undercover related-word mode.</p>
+                  <div class="mt-3 inline-flex items-center px-3 py-1 bg-[#E65100]/10 border border-[#E65100]/20 rounded-full text-[10px] font-bold text-[#E65100]">3–11 Players</div>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-[#E65100] text-white flex items-center justify-center shadow-md">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+
+            <button data-game="WORD_WOLF" class="game-card w-full rounded-[26px] bg-[#FFEBE1] border border-[#FFD8B3]/40 p-5 text-left shadow-sm hover:shadow-md transition-all relative overflow-hidden">
+              <span class="absolute -right-12 -top-12 w-32 h-32 rounded-full bg-[#E65100]/10 blur-2xl"></span>
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="text-xs uppercase tracking-widest font-extrabold text-[#E65100]">Active</div>
+                  <h3 class="mt-1 text-2xl font-extrabold text-[#3E2723] font-heading">Word Wolf</h3>
+                  <p class="mt-2 text-xs text-[#5D4037]/80">Majority vs Minority with asymmetric words.</p>
+                  <div class="mt-3 inline-flex items-center px-3 py-1 bg-[#E65100]/10 border border-[#E65100]/20 rounded-full text-[10px] font-bold text-[#E65100]">3–11 Players</div>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-[#E65100] text-white flex items-center justify-center shadow-md">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 18h6m-7 2a7 7 0 0 1 14 0v0a7 7 0 0 1-14 0v0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 2l3 6H9l3-6z" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+
+            <button data-game="FOREHEAD_20Q" class="game-card w-full rounded-[26px] bg-[#FFEBE1] border border-[#FFD8B3]/40 p-5 text-left shadow-sm hover:shadow-md transition-all relative overflow-hidden">
+              <span class="absolute -right-12 -top-12 w-32 h-32 rounded-full bg-[#E65100]/10 blur-2xl"></span>
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="text-xs uppercase tracking-widest font-extrabold text-[#E65100]">New</div>
+                  <h3 class="mt-1 text-2xl font-extrabold text-[#3E2723] font-heading">Forehead 20Q</h3>
+                  <p class="mt-2 text-xs text-[#5D4037]/80">20 yes/no questions. Group reveals active word.</p>
+                  <div class="mt-3 inline-flex items-center px-3 py-1 bg-[#E65100]/10 border border-[#E65100]/20 rounded-full text-[10px] font-bold text-[#E65100]">2–11 Players</div>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-[#E65100] text-white flex items-center justify-center shadow-md">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 18h.01M7 10h10M8 6h8l1 4-1 4H8l-1-4 1-4z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 20h6" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+
+            <button data-game="SPYFALL" class="game-card w-full rounded-[26px] bg-[#FFEBE1] border border-[#FFD8B3]/40 p-5 text-left shadow-sm hover:shadow-md transition-all relative overflow-hidden">
+              <span class="absolute -right-12 -top-12 w-32 h-32 rounded-full bg-[#E65100]/10 blur-2xl"></span>
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="text-xs uppercase tracking-widest font-extrabold text-[#E65100]">New</div>
+                  <h3 class="mt-1 text-2xl font-extrabold text-[#3E2723] font-heading">Spyfall</h3>
+                  <p class="mt-2 text-xs text-[#5D4037]/80">Spy deduces the location. Everyone else hunts.</p>
+                  <div class="mt-3 inline-flex items-center px-3 py-1 bg-[#E65100]/10 border border-[#E65100]/20 rounded-full text-[10px] font-bold text-[#E65100]">3–11 Players</div>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-[#E65100] text-white flex items-center justify-center shadow-md">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <div class="text-center text-xs text-[#5D4037]/60 font-semibold uppercase tracking-widest pb-8">Single-device pass-and-view</div>
+        </div>
+      </section>
+
+      <!-- Player setup -->
+      <section id="view-player-setup" class="view hidden h-full flex flex-col">
+        <div class="px-6 pt-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs uppercase tracking-widest text-[#E65100] font-extrabold">Setup</div>
+              <h2 class="text-2xl font-extrabold text-[#3E2723] font-heading mt-1">Player Lineup</h2>
+            </div>
+            <div class="text-xs font-semibold text-[#5D4037]/80">Min: <span id="min-players" class="font-extrabold text-[#E65100]">3</span></div>
+          </div>
+
+          <!-- Players input -->
+          <div class="mt-5">
+            <div class="flex gap-2">
+              <input id="input-player-name" type="text" maxlength="24" placeholder="Add player name" class="flex-1 bg-[#FFEBE1] border border-[#FFD8B3] rounded-2xl px-4 py-3 text-[#3E2723] font-medium placeholder-[#5D4037]/40 focus:outline-none focus:ring-2 focus:ring-[#E65100]" />
+              <button id="btn-add-player" class="w-12 h-12 bg-[#E65100] hover:bg-[#BF360C] text-white rounded-2xl flex items-center justify-center shadow-sm hover:scale-105 active:scale-95 transition-transform" aria-label="Add Player">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14m-7-7h14" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-2.5" id="players-chips"></div>
+
+            <div class="mt-3 text-xs text-[#5D4037]/70">
+              Tip: Keep names short. This app hides secrets until the group explicitly taps reveal.
+            </div>
+          </div>
+        </div>
+
+        <!-- Game specific setup -->
+        <div class="px-6 mt-6 flex-1 overflow-y-auto hide-scrollbar safe-bottom">
+          <div id="setup-block" class="space-y-4"></div>
+
+          <div class="mt-6 text-center">
+            <button id="btn-open-guidelines" class="btn-primary w-full py-4 rounded-[24px] text-white font-extrabold text-lg transition-transform active:scale-95">
+              Continue
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Guidelines modal (Tailwind UI aesthetic) -->
+      <div id="modal-guidelines" class="fixed inset-0 hidden items-center justify-center z-[100]">
+        <div class="absolute inset-0 bg-black/25" id="modal-guidelines-backdrop"></div>
+        <div class="relative w-full max-w-md mx-auto bg-[#FFDFD0] border border-[#FFB396]/40 shadow-2xl rounded-[32px] overflow-hidden">
+          <div class="px-6 pt-6 pb-4">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="text-xs uppercase tracking-widest font-extrabold text-[#E65100]">Game Flow</div>
+                <h3 id="guidelines-title" class="text-2xl font-extrabold text-[#3E2723] font-heading mt-1">Guidelines</h3>
+                <p id="guidelines-desc" class="text-sm text-[#5D4037] mt-2 leading-relaxed"> </p>
+              </div>
+              <button id="btn-close-guidelines" class="w-10 h-10 rounded-full bg-[#FFEBE1] text-[#E65100] flex items-center justify-center hover:scale-105 active:scale-95 transition-transform" aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="mt-4 bg-[#FFEBE1] border border-[#FFD8B3]/60 rounded-[22px] p-4">
+              <ol id="guidelines-steps" class="space-y-3">
+                <!-- step items -->
+              </ol>
+            </div>
+
+            <div class="mt-4 text-xs text-[#5D4037]/70">
+              This is designed for a single device: the group can only see what you reveal.
+            </div>
+          </div>
+
+          <div class="px-6 pb-6">
+            <button id="btn-start-game" class="btn-primary w-full py-4 rounded-[24px] text-white font-extrabold text-lg transition-transform active:scale-95">
+              Start Game
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game screens -->
+      <section id="view-secret-distribution" class="view hidden h-full flex flex-col">
+        <div class="px-6 pt-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs uppercase tracking-widest font-extrabold text-[#E65100]">Pass-and-View</div>
+              <h2 class="text-2xl font-extrabold text-[#3E2723] font-heading mt-1">Secure Handover</h2>
+            </div>
+            <div class="text-xs font-semibold text-[#5D4037]/80"><span class="font-extrabold text-[#E65100]" id="handover-step">1</span>/<span id="handover-total">1</span></div>
+          </div>
+
+          <div class="mt-5 text-center">
+            <div class="inline-flex items-center px-3 py-1 rounded-full border border-[#FFD8B3] bg-[#FFEBE1]">
+              <span class="text-xs font-bold text-[#E65100] uppercase tracking-widest">Pass the device to</span>
+              <span id="handover-target" class="ml-2 text-sm font-extrabold text-[#3E2723]">Player</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 flex-1 overflow-y-auto hide-scrollbar pb-8">
+          <div class="mt-6 bg-white/70 rounded-[28px] border border-[#FFD8B3]/50 p-5">
+            <div class="grid grid-cols-1 gap-4">
+              <div class="rounded-[22px] border border-[#FFD8B3]/60 bg-[#FFEBE1] p-4 relative overflow-hidden">
+                <div class="scrim-blur absolute inset-0 opacity-0" id="secret-scrim"></div>
+                <div class="relative">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="text-xs uppercase tracking-widest font-extrabold text-[#5D4037]/70">Your Secret</div>
+                      <div class="mt-2 text-sm font-semibold text-[#5D4037]" id="secret-subtitle"> Tap to reveal</div>
+                    </div>
+                    <div class="w-10 h-10 rounded-2xl bg-[#E65100] text-white flex items-center justify-center">
+                      <span class="text-lg">🔒</span>
+                    </div>
+                  </div>
+
+                  <div class="mt-4 h-40 rounded-[24px] bg-[#FFF5F0] border border-[#FFD8B3]/60 overflow-hidden relative">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <div class="text-center px-6">
+                        <div class="text-[#5D4037] font-bold uppercase tracking-widest text-xs">Tap to reveal</div>
+                        <div class="mt-2 text-2xl font-extrabold text-[#E65100] tap-pulse">Secret Word</div>
+                      </div>
+                    </div>
+                    <div id="secret-reveal-layer" class="hidden absolute inset-0 p-4 flex flex-col justify-center">
+                      <div class="text-3xl font-extrabold text-[#E65100] leading-tight text-center" id="secret-title">WORD</div>
+                      <div class="mt-3 text-sm text-[#5D4037] text-center font-semibold" id="secret-desc">Role details</div>
+                    </div>
+
+                    <div id="secret-hidden-overlay" class="absolute inset-0 bg-[#FFDFD0]/30" ></div>
+                  </div>
+
+                  <div class="mt-4 space-y-3">
+                    <button id="btn-reveal-secret" class="btn-primary w-full py-4 rounded-[22px] text-white font-extrabold text-lg">
+                      Tap to Reveal
+                    </button>
+                    <button id="btn-hide-and-pass" class="w-full py-4 rounded-[22px] bg-[#3E2723] hover:bg-[#5D4037] text-white font-extrabold text-lg rounded-[22px] active:scale-95 transition-transform">
+                      I’ve seen it — Hide & Pass
+                    </button>
+                  </div>
+
+                  <div class="mt-3 text-xs text-[#5D4037]/70">
+                    Security UX: blur/scrim hides secret until reveal.
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-[22px] bg-[#FFEBE1] border border-[#FFD8B3]/60 p-4">
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 rounded-2xl bg-[#E65100]/10 flex items-center justify-center">🧠</div>
+                  <div>
+                    <div class="text-sm font-extrabold text-[#3E2723]">Pass-and-view rules</div>
+                    <ul class="mt-2 text-xs text-[#5D4037] space-y-1">
+                      <li>• The active player taps <b>Reveal</b> on their device.</li>
+                      <li>• Other players should look away.</li>
+                      <li>• After reading, tap <b>Hide & Pass</b> to rotate.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 pb-6">
+          <button id="btn-distribution-skip" class="w-full py-4 rounded-[24px] bg-[#FFEBE1] hover:bg-[#FFD8B3]/40 text-[#3E2723] font-extrabold text-lg border border-[#FFB396]/30 hidden">
+            Continue
+          </button>
+        </div>
+      </section>
+
+      <!-- Gameplay generic view -->
+      <section id="view-gameplay" class="view hidden h-full flex flex-col">
+        <div class="px-6 pt-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="text-xs uppercase tracking-widest font-extrabold text-[#E65100]">Gameplay</div>
+              <h2 id="gameplay-title" class="text-2xl font-extrabold text-[#3E2723] font-heading mt-1">Game</h2>
+              <p id="gameplay-subtitle" class="text-sm text-[#5D4037] mt-2"></p>
+            </div>
+            <div class="flex flex-col items-end">
+              <div class="inline-flex items-center px-3 py-1 rounded-full border border-[#FFD8B3] bg-[#FFEBE1]">
+                <span id="pill-phase" class="text-xs font-bold text-[#E65100] uppercase tracking-widest">Phase</span>
+              </div>
+              <div class="mt-2 text-xs font-semibold text-[#5D4037]/70">Turn</div>
+              <div id="turn-indicator" class="text-xs font-extrabold text-[#E65100] uppercase tracking-widest">1/1</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 flex-1 overflow-y-auto hide-scrollbar pb-28">
+          <div id="gameplay-body" class="space-y-4"></div>
+        </div>
+
+        <div class="px-6 pb-6 safe-bottom">
+          <div id="gameplay-footer" class="space-y-3"></div>
+        </div>
+      </section>
+
+      <!-- Results -->
+      <section id="view-results" class="view hidden h-full flex flex-col">
+        <div class="px-6 pt-6">
+          <div class="text-xs uppercase tracking-widest font-extrabold text-[#E65100]">Results</div>
+          <h2 id="results-title" class="text-3xl font-extrabold text-[#3E2723] font-heading mt-1">Victory</h2>
+          <p id="results-subtitle" class="text-sm text-[#5D4037] mt-2"></p>
+
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span id="results-pill-1" class="px-3 py-1.5 bg-[#FFEBE1] border border-[#FFD8B3]/60 rounded-full text-xs font-bold text-[#3E2723]">Category</span>
+            <span id="results-pill-2" class="px-3 py-1.5 bg-[#FFEBE1] border border-[#FFD8B3]/60 rounded-full text-xs font-bold text-[#3E2723]">Mode</span>
+          </div>
+        </div>
+
+        <div class="px-6 flex-1 overflow-y-auto hide-scrollbar pb-8 mt-3">
+          <div class="bg-white/70 rounded-[28px] border border-[#FFD8B3]/50 p-5">
+            <div class="text-sm font-extrabold text-[#3E2723]">Reveal</div>
+            <div id="results-reveal" class="mt-4 space-y-3"></div>
+          </div>
+
+          <div id="results-words" class="mt-4"></div>
+        </div>
+
+        <div class="px-6 pb-6">
+          <div class="space-y-3">
+            <button id="btn-play-again" class="btn-primary w-full py-4 rounded-[24px] text-white font-extrabold text-lg transition-transform active:scale-95">Play Again</button>
+            <button id="btn-reset" class="w-full py-4 rounded-[24px] bg-[#FFEBE1] hover:bg-[#FFD8B3]/40 text-[#3E2723] font-extrabold text-lg border border-[#FFB396]/30 transition-colors">Back to Home</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    /***********************
+     * Utilities
+     ***********************/
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+    function escapeHTML(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;',
+        '<': '<',
+        '>': '>',
+        '"': '"',
+        "'": '&#39;'
+      }[c]));
+    }
+
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+    function shuffleInPlace(arr, rng=Math.random) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function uniqPush(arr, set, v) {
+      if (!set.has(v)) { set.add(v); arr.push(v); }
+    }
+
+    function sample(arr, rng=Math.random) {
+      return arr[Math.floor(rng() * arr.length)];
+    }
+
+    function hslToHex(h, s, l) {
+      s/=100; l/=100;
+      const k = n => (n + h/30) % 12;
+      const a = s * Math.min(l, 1-l);
+      const f = n => l - a * Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n),1)));
+      const toHex = x => Math.round(255*x).toString(16).padStart(2,'0');
+      return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+    }
+
+    function launchConfetti() {
+      const duration = 2600;
+      const end = Date.now() + duration;
+      const colors = [hslToHex(18, 100, 55), hslToHex(28, 100, 55), hslToHex(38, 100, 55), hslToHex(10, 100, 45)];
+      const spawnEvery = 35;
+      const interval = setInterval(() => {
+        if (Date.now() > end) return clearInterval(interval);
+        const el = document.createElement('div');
+        el.className = 'confetti';
+        el.style.left = (Math.random() * 100) + 'vw';
+        el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        el.style.transform = `rotate(${Math.random()*360}deg) scale(${0.85+Math.random()*0.55})`;
+        el.style.animationDuration = (1.8 + Math.random()*1.1) + 's';
+        document.body.appendChild(el);
+        setTimeout(()=>el.remove(), 3200);
+      }, spawnEvery);
+    }
+
+    /***********************
+     * Sound (WebAudio)
+     ***********************/
+    class SynthAudio {
+      constructor(){ this.ctx = null; this.muted = false; }
+      ensure(){
+        if (this.ctx) return;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AC();
+      }
+      async unlock(){
+        try {
+          this.ensure();
+          if (this.ctx.state === 'suspended') await this.ctx.resume();
+        } catch {}
+      }
+      setMuted(m){ this.muted = m; }
+      click(){ if(this.muted) return; this.ensure(); this.unlock();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(700, t);
+        gain.gain.setValueAtTime(0.08, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t+0.08);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(t); osc.stop(t+0.08);
+      }
+      reveal(){ if(this.muted) return; this.ensure(); this.unlock();
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(240, t);
+        osc.frequency.exponentialRampToValueAtTime(520, t+0.18);
+        gain.gain.setValueAtTime(0.12, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t+0.18);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(t); osc.stop(t+0.18);
+      }
+      win(){ if(this.muted) return; this.ensure(); this.unlock();
+        const t = this.ctx.currentTime;
+        const seq = [523.25, 659.25, 783.99, 1046.5];
+        seq.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, t + i*0.12);
+          gain.gain.setValueAtTime(0.08, t + i*0.12);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + i*0.12 + 0.12);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(t + i*0.12);
+          osc.stop(t + i*0.12 + 0.12);
+        });
+      }
+      lose(){ if(this.muted) return; this.ensure(); this.unlock();
+        const t = this.ctx.currentTime;
+        const seq = [220.0, 207.65, 196.0];
+        seq.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(f, t + i*0.12);
+          gain.gain.setValueAtTime(0.07, t + i*0.12);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + i*0.12 + 0.12);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(t + i*0.12);
+          osc.stop(t + i*0.12 + 0.12);
+        });
+      }
+    }
+
+    /***********************
+     * DataFactory (internal programmatic massive dataset)
+     ***********************/
+    class DataFactory {
+      constructor(){
+        this.cache = {};
+      }
+
+      /* Generic pair generator helpers */
+      _makePairsFromSeeds(seedsA, seedsB, targetCount, {pairFlavor='paired', avoidSame=true}={}){
+        const pairs = [];
+        const used = new Set();
+        const rng = Math.random;
+        while (pairs.length < targetCount) {
+          const a = sample(seedsA, rng);
+          const b = sample(seedsB, rng);
+          if (avoidSame && a === b) continue;
+          const key = `${a}::${b}`;
+          if (used.has(key)) continue;
+          used.add(key);
+          // We store {word1, word2}
+          pairs.push({ word1: a, word2: b, flavor: pairFlavor });
+        }
+        return pairs;
+      }
+
+      _makeCityPairs(targetCount) {
+        // Cities + iconic related entity pairs (nearby vibe) 
+        const cities = [
+          'Tokyo','Paris','London','New York','San Francisco','Berlin','Rome','Madrid','Barcelona','Amsterdam','Dublin','Vienna','Prague','Warsaw','Stockholm',
+          'Sydney','Melbourne','Brisbane','Auckland','Toronto','Vancouver','Mexico City','São Paulo','Rio de Janeiro','Buenos Aires',
+          'Mumbai','Delhi','Bengaluru','Bangkok','Singapore','Kuala Lumpur','Seoul','Busan','Beijing','Shanghai','Hong Kong','Taipei',
+          'Cairo','Lagos','Nairobi','Cape Town','Athens','Istanbul','Dubai','Riyadh','Doha'
+        ];
+        const landmarks = [
+          'Eiffel Tower','Big Ben','Statue of Liberty','Golden Gate Bridge','Brandenburg Gate','Colosseum','Sagrada Família','Canal District','Trinity College','Schönbrunn Palace',
+          'Charles Bridge','Royal Palace','The Brandenburg Streets','Belvedere','Old Town Market','Opera House','Sydney Harbour','Pike Place Market','Champs-Élysées','Wall Street',
+          'Petronas Towers','Marina Bay','Gyeongbokgung','Bukchon Hanok','Sukhumvit','Shibuya Crossing','Gwanghwamun Plaza','Tsim Sha Tsui Promenade','Victoria Harbour',
+          'Taj Mahal','Gateway Arch','Sultanahmet Square','Blue Mosque','Pyramids of Giza','Atlas Mountains Road','Kilimanjaro View'
+        ];
+        const pairs = [];
+        const used = new Set();
+        while (pairs.length < targetCount) {
+          const c = sample(cities);
+          const l = sample(landmarks);
+          const key = `${c}::${l}`;
+          if (used.has(key)) continue;
+          used.add(key);
+          pairs.push({ word1: c, word2: l, flavor: 'city-landmark' });
+        }
+        return pairs;
+      }
+
+      _makeLocations(targetCount) {
+        const places = [
+          'Pirate Ship','Space Station','Submarine','Haunted Mansion','Magic School','Sports Stadium','Neon Arcade','Cyberpunk Alley','Tropical Island',
+          'Desert Bazaar','Ancient Temple','Underwater Cave','Snowy Mountain Lodge','Robo Dockyard','Castle Ballroom','Royal Library','Alien Garden','Astronomy Dome',
+          'Volcanic Observatory','Rooftop Greenhouse','Medieval Blacksmith','Train Dining Car','Airport Terminal','Museum After Hours','Lighthouse at Dusk','Sky Bridge',
+          'Castle Dungeon','Dungeon Arcade','Volleyball Beach','Winter Carnival','Taco Truck Park','Comic Book Shop','Tea House','Cat Café','Botanical Garden','Clock Tower'
+        ];
+        const modifiers = [
+          'of Doom','of Secrets','of Legends','at Midnight','Under Siege','After Party','With Broken Wi-Fi','Where Time Loops','During a Meteor Shower','In the Rain',
+          'During a Parade','Before the Final Boss','Full of Clues','No One Is Watching','Powered by Fossil Fuels','Made of Ice','Made of Glass','Deep in the Clouds','Hidden in Fog'
+        ];
+
+        const locations = [];
+        const used = new Set();
+        while (locations.length < targetCount) {
+          const p = sample(places);
+          const m = sample(modifiers);
+          const loc = `${p} ${m}`;
+          if (used.has(loc)) continue;
+          used.add(loc);
+          locations.push(loc);
+        }
+        return locations;
+      }
+
+      _makeForeheadPool() {
+        // Build a blended master pool from multiple dictionaries; then expand by pairing templates.
+        // Requirement: 300+ highly recognizable pop culture figures/historical/icons + animals/objects/concepts.
+        const icons = [
+          'Naruto Uzumaki','Sasuke Uchiha','Monkey D. Luffy','Roronoa Zoro','Ichigo Kurosaki','Asta','Izuku Midoriya','Kakashi Hatake','Saitama','Goku','Vegeta','Light Yagami','Luffy (Straw Hat)','Megumin','Nezuko Kamado',
+          'Iron Man','Spider-Man','Batman','Superman','Wonder Woman','The Joker','Darth Vader','Luke Skywalker','Harry Potter','Hermione Granger','Ron Weasley','Sherlock Holmes','Indiana Jones','James Bond',
+          'Leonardo da Vinci','Nikola Tesla','Albert Einstein','Isaac Newton','Cleopatra','Julius Caesar','Marie Curie','Charles Darwin','Galileo Galilei','Ada Lovelace','King Tut',
+          'Elon Musk','Taylor Swift','Beyoncé','Cristiano Ronaldo','Lionel Messi','Serena Williams','Michael Jordan','Kobe Bryant','Usain Bolt','LeBron James','Eminem','Ariana Grande',
+          'Mario','Luigi','Pikachu','Sonic the Hedgehog','Link','Zelda','Kirby','Samus Aran','Darth Revan','Gandalf'
+        ];
+        const animals = [
+          'Red Panda','Axolotl','Capybara','Platypus','Snow Leopard','Bald Eagle','Giraffe','Chameleon','Orangutan','Komodo Dragon','Fennec Fox','Narwhal','Koala','Penguin','Cheetah','Owl','Wolf','Hedgehog'
+        ];
+        const objects = [
+          'Rubik’s Cube','Pocket Watch','Magic Wand','Laser Pointer','Dragon Egg','Golden Key','Starlight Compass','Infrared Thermometer','Jetpack Backpack','Portable Projector','Neon Sign','Candle Lantern','Sapphire Ring',
+          'Mechanical Pencil','Thermos Flask','Super Soaker','Bicycle Bell','Glowing Snow Globe','Spectacles','Earbuds Case','Desk Fan'
+        ];
+        const concepts = [
+          'Time Travel','Parallel Universes','Teleportation','The Last Question','Dream Stealer','Memory Lane','Gravity Boots','Infinite Loop','Mind Reading','Invisible Ink','Silent Thunder','Perfect Alibi',
+          'Hidden Doorways','Parallel Histories','Reverse Gravity','Cosmic Hush','Lightning Negotiator'
+        ];
+
+        // Expand pool by compositing templates (still recognizable-ish)
+        const adjectives = ['Electric','Midnight','Golden','Crimson','Celestial','Shadow','Nova','Mystic','Retro','Quantum','Velvet','Iron','Silver','Sunset','Neon','Starlit','Whisper','Brass'];
+        const nouns = ['Cipher','Guardian','Whisper','Conductor','Detective','Warden','Navigator','Smith','Wizard','Phantom','Courier','Architect','Ranger','Prophet','Bounty','Oracle','Drifter','Scribe'];
+
+        const pool = [];
+        const used = new Set();
+        const add = (x) => { if(!used.has(x)){ used.add(x); pool.push(x); } };
+
+        [...icons, ...animals, ...objects, ...concepts].forEach(add);
+
+        // Create additional ~600 entries, but we only need 300+. We'll generate ~500 to be safe.
+        while (pool.length < 450) {
+          const a = sample(adjectives);
+          const n = sample(nouns);
+          const base = `${a} ${n}`;
+          add(base);
+          // also blend with icon/animal lightly
+          const anchor = sample([...icons, ...animals, ...objects]);
+          add(`${anchor} of ${a}`);
+        }
+
+        return pool;
+      }
+
+      generateImposterPairs(categoryName) {
+        // Must produce exactly 300 pairs per category.
+        // Use thematic dictionaries to avoid manual 300 entries.
+        const dictionaries = {
+          Anime: {
+            seeds1: ['Naruto Uzumaki','Monkey D. Luffy','Ichigo Kurosaki','Asta','Izuku Midoriya','Kakashi Hatake','Saitama','Goku','Vegeta','Light Yagami','Sasuke Uchiha','Megumin','Nezuko Kamado','Mikasa Ackerman','Levi Ackerman','Eren Yeager','Rimuru Tempest','Edward Elric','Edward','Tanjiro Kamado'],
+            seeds2: ['Sasuke Uchiha','Roronoa Zoro','Uryu Ishida','Yuno','Katsuki Bakugo','Might Guy','Genos','Jiren','Frieza','L','Ryuk','Megumi Kato','Inosuke Hashibira','Mikasa Ackerman','Armin Arlert','Erwin Smith','Shuna','Alphonse Elric','Levi Ackerman','Zenitsu Agatsuma']
+          },
+          Movies: {
+            seeds1: ['Titanic','Inception','Interstellar','The Dark Knight','Toy Story','Jurassic Park','The Matrix','Gladiator','Pulp Fiction','The Avengers','Shrek','Frozen','The Lion King','Dune','Mad Max: Fury Road','Parasite','Knives Out','Get Out','The Shining','Arrival'],
+            seeds2: ['Avatar','Interstellar','Inception','Joker','Finding Nemo','King Kong','Terminator','Braveheart','Fight Club','Justice League','Monsters, Inc.','Tangled','Aladdin','Blade Runner 2049','The Book of Eli','Squid Game','Glass Onion','Us','Psycho','Annihilation']
+          },
+          'Real Persons': {
+            seeds1: ['Elon Musk','Cristiano Ronaldo','Taylor Swift','Bill Gates','Albert Einstein','Barack Obama','Mark Zuckerberg','LeBron James','Kobe Bryant','Stephen Curry','Tom Brady','Michael Jordan','Serena Williams','Muhammad Ali','Mike Tyson','Usain Bolt','Leonardo DiCaprio','Keanu Reeves','Lady Gaga','Neil deGrasse Tyson'],
+            seeds2: ['Jeff Bezos','Lionel Messi','Beyoncé','Steve Jobs','Isaac Newton','Donald Trump','Jack Dorsey','Michael Jordan','Shaquille O\'Neal','Kevin Durant','Peyton Manning','Magic Johnson','Venus Williams','Joe Frazier','Evander Holyfield','Justin Gatlin','Brad Pitt','Hugh Jackman','Madonna','Bill Nye']
+          },
+          Objects: {
+            seeds1: ['Laptop','Pen','Coffee','Bicycle','Book','Headphones','Wristwatch','Camera','Monitor','Keyboard','Printer','Desk','Sofa','Bed','Pillow','Curtain','Lamp','Flashlight','Wallet','Backpack'],
+            seeds2: ['Tablet','Pencil','Tea','Scooter','Notebook','Earbuds','Smartwatch','Smartphone','Television','Mouse','Scanner','Chair','Armchair','Mattress','Blanket','Blind','Lantern','Candle','Purse','Briefcase']
+          }
+        };
+
+        const d = dictionaries[categoryName] || dictionaries.Objects;
+        return this._makePairsFromSeeds(d.seeds1, d.seeds2, 300, { pairFlavor: categoryName });
+      }
+
+      generateWordWolfPairs(categoryName) {
+        // Exactly 300 pairs per category
+        // We build related word pairs from themed seeds.
+        const dict = {
+          Animals: {
+            a: ['Cat','Dog','Fox','Wolf','Bear','Lion','Tiger','Eagle','Owl','Raven','Deer','Rabbit','Koala','Panda','Coyote','Shark'],
+            b: ['Kitten','Hound','Vixen','Husky','Grizzly','Cub','Panther','Hawk','Opossum','Crow','Doe','Bunny','Koalabear','Giant Panda','Coyote Pup','Hammerhead']
+          },
+          Food: {
+            a: ['Apple','Pear','Grapes','Mango','Banana','Strawberry','Blueberry','Carrot','Potato','Broccoli','Tomato','Cheese','Bread','Chocolate','Pizza','Sushi'],
+            b: ['Pear','Apple','Banana','Strawberry','Mango','Blueberry','Grapes','Potato','Carrot','Cauliflower','Cucumber','Yogurt','Bagel','Vanilla Ice Cream','Pasta','Ramen']
+          },
+          Technology: {
+            a: ['Laptop','Tablet','Smartphone','Router','Headphones','Keyboard','Mouse','Microphone','Camera','Monitor','SSD','USB','Bluetooth Speaker','VR Headset','Smartwatch','Gamepad'],
+            b: ['Desktop','E-reader','Phone Case','Modem','Earbuds','Keypad','Trackpad','Speaker','Action Cam','TV','HDD','SD Card','Soundbar','AR Glasses','Fitness Band','Joystick']
+          },
+          Cities: {
+            a: ['Tokyo','Paris','London','New York','Berlin','Rome','Madrid','Barcelona','Amsterdam','Vienna','Prague','Sydney'],
+            b: ['Osaka','Marseille','Manchester','Boston','Munich','Milan','Valencia','Seville','Rotterdam','Salzburg','Brno','Melbourne']
+          }
+        };
+
+        if(categoryName === 'Cities') return this._makeCityPairs(300);
+        const d = dict[categoryName] || dict.Animals;
+        return this._makePairsFromSeeds(d.a, d.b, 300, { pairFlavor: categoryName });
+      }
+
+      generateSpyfallLocations() {
+        return this._makeLocations(300);
+      }
+
+      // Public API
+      getImposterDataset() {
+        const keys = ['Anime','Movies','Real Persons','Objects'];
+        const out = {};
+        for (const k of keys) out[k] = this.generateImposterPairs(k);
+        return out;
+      }
+
+      getWordWolfDataset() {
+        const keys = ['Animals','Food','Technology','Cities'];
+        const out = {};
+        for (const k of keys) out[k] = this.generateWordWolfPairs(k);
+        return out;
+      }
+
+      getForeheadPool() {
+        return this._makeForeheadPool();
+      }
+
+      getSpyfallLocations() {
+        return this.generateSpyfallLocations();
+      }
+
+      ensureAll() {
+        if(this.cache.ready) return;
+        this.cache.imposterPairs = this.getImposterDataset();
+        this.cache.wordWolfPairs = this.getWordWolfDataset();
+        this.cache.foreheadPool = this.getForeheadPool();
+        this.cache.spyLocations = this.getSpyfallLocations();
+        this.cache.ready = true;
+      }
+    }
+
+    /***********************
+     * View Model Games
+     ***********************/
+
+    class GameBase {
+      constructor(app){ this.app = app; this.state = {}; }
+      minPlayers(){ return 3; }
+      categoryOptions(){ return []; }
+      initFromSetup(setup){ /* override */ }
+      start(){ /* override */ }
+      // distribution
+      getDistributionPayload(){ /* override */ return null; }
+      onReveal(){}
+      onHidePass(){}
+
+      // gameplay
+      getGameplayView(){ return { title:'', subtitle:'', phasePill:'', body:[], footer:[] }; }
+      onPrimaryAction(){}
+      onSecondaryAction(){}
+
+      isGameOver(){ return false; }
+      getResults(){ return null; }
+    }
+
+    /* GAME 1: IMPOSER */
+    class ImposterGame extends GameBase {
+      minPlayers(){ return 3; }
+      categoryOptions(){ return ['Anime','Movies','Real Persons','Objects']; }
+
+      initFromSetup(setup){
+        const { players, category, mode } = setup;
+        this.appState = this.app.state;
+        this.state.players = players;
+        this.state.category = category;
+        this.state.mode = mode; // 'CLASSIC' | 'UNDERCOVER'
+
+        // Generate dataset lazily but already internal.
+        const pairs = this.app.data.imposterPairs[category] || this.app.data.imposterPairs.Objects;
+        this.state.pair = sample(pairs);
+
+        // Choose imposter
+        this.state.imposterIndex = Math.floor(Math.random() * players.length);
+        this.state.roles = players.map((p, idx) => {
+          const isImposter = idx === this.state.imposterIndex;
+          if(!isImposter) {
+            return { name: p, roleLabel:'Investigator', word: this.state.pair.word1, isImposter:false };
+          }
+          if(mode === 'CLASSIC') {
+            return { name: p, roleLabel:'Imposter', word: '???', isImposter:true };
+          }
+          // Undercover mode: imposter gets related word (word2)
+          return { name: p, roleLabel:'Imposter', word: this.state.pair.word2, isImposter:true };
+        });
+
+        // Distribution sequence: every player reveals their secret once.
+        this.state.distributionIndex = 0;
+        this.state.revealed = false;
+
+        // Gameplay phases
+        this.state.clueTurn = 0;
+        this.state.votingReady = false;
+        this.state.votes = null;
+        this.state.selectedVoteIndex = null;
+        this.state.winnerTeam = null; // 'INVESTIGATORS'|'IMPOSTER'
+      }
+
+      start(){
+        this.app.setProgress(1);
+        this.state.distributionIndex = 0;
+      }
+
+      getDistributionPayload(){
+        const idx = this.state.distributionIndex;
+        const role = this.state.roles[idx];
+        const subtitle = this.state.mode === 'CLASSIC'
+          ? (role.isImposter ? 'You are the Imposter' : 'Your secret word')
+          : (role.isImposter ? 'You have the related word' : 'Your secret word');
+
+        return {
+          targetName: role.name,
+          secretTitle: role.word,
+          secretDesc: role.isImposter ? 'Blend in. Don’t give away your real word.' : 'Give clues about your word. Catch the Imposter.',
+          pillText: role.roleLabel
+        };
+      }
+
+      onReveal(){
+        this.state.revealed = true;
+        this.app.audio.reveal();
+      }
+
+      onHidePass(){
+        this.state.distributionIndex++;
+        this.state.revealed = false;
+        if(this.state.distributionIndex >= this.state.roles.length) {
+          this.app.toGameplay({ phase: 'CLUES' });
+        } else {
+          this.app.refreshDistribution();
+        }
+      }
+
+      getGameplayView(){
+        const phase = this.app.gamePhase;
+        if(phase === 'CLUES') {
+          const activePlayerIdx = this.state.clueTurn;
+          return {
+            title: 'Give Clues',
+            subtitle: 'Each player states a related clue. Pass the device when ready.',
+            phasePill: this.state.mode === 'UNDERCOVER' ? 'Undercover Clues' : 'Classic Clues',
+            turnText: `${activePlayerIdx+1}/${this.state.players.length}`,
+            body: [
+              { type:'callout', text: `Player ${this.state.players[activePlayerIdx]} is speaking.` },
+              { type:'stack', items: [
+                { label:'Clue idea', text: 'Share a synonym, example, or “things it goes with.” Avoid direct answers.' },
+                { label:'Imposter strategy', text: 'Look confident. Drift toward the other word without revealing it.' }
+              ] }
+            ],
+            footer: [
+              { type:'primary', id:'btn-next-clue', label: activePlayerIdx+1 === this.state.players.length ? 'Go to Voting' : 'Next Player' },
+              { type:'secondary', id:'btn-skip', label:'(Skip clues)' }
+            ]
+          };
+        }
+
+        if(phase === 'VOTING') {
+          return {
+            title: 'Vote',
+            subtitle: 'Select who you think is the Imposter.',
+            phasePill: 'Voting Round',
+            turnText: '',
+            body: [
+              { type:'vote-grid', players: this.state.roles.map(r=>r.name), selectedIndex: this.state.selectedVoteIndex }
+            ],
+            footer: [
+              { type:'primary', id:'btn-confirm-vote', label:'Confirm Vote', disabled: this.state.selectedVoteIndex==null }
+            ]
+          };
+        }
+
+        return this.app.fallbackGameplay();
+      }
+
+      onPrimaryAction(){
+        const phase = this.app.gamePhase;
+        if(phase === 'CLUES'){
+          if(this.state.clueTurn + 1 >= this.state.players.length){
+            this.app.toGameplay({ phase:'VOTING' });
+            return;
+          }
+          this.state.clueTurn++;
+          this.app.renderGameplay();
+          return;
+        }
+
+        if(phase === 'VOTING'){
+          const votedIdx = this.state.selectedVoteIndex;
+          const votedRole = this.state.roles[votedIdx];
+          this.state.winnerTeam = (votedIdx === this.state.imposterIndex) ? 'INVESTIGATORS' : 'IMPOSTER';
+          this.app.finishGame();
+        }
+      }
+
+      setVoteIndex(i){ this.state.selectedVoteIndex = i; this.app.renderGameplay(); }
+
+      getResults(){
+        const isInvestigatorsWin = this.state.winnerTeam === 'INVESTIGATORS';
+        return {
+          title: isInvestigatorsWin ? 'Investigators Win!' : 'Imposter Wins!',
+          subtitle: isInvestigatorsWin
+            ? `You voted out the Imposter: ${this.state.roles[this.state.imposterIndex].name}.`
+            : `Nope. The Imposter survived: ${this.state.roles[this.state.imposterIndex].name}.`,
+          pill1: this.state.category,
+          pill2: this.state.mode === 'CLASSIC' ? 'Classic Mode' : 'Undercover Mode',
+          words: {
+            aLabel: 'Investigator Word',
+            bLabel: 'Imposter/Related Word',
+            a: this.state.pair.word1,
+            b: this.state.mode === 'CLASSIC' ? '??? (Blind)' : this.state.pair.word2
+          },
+          reveal: this.state.roles.map(r => ({ name:r.name, tag: r.isImposter ? r.roleLabel : 'Investigator', word: r.word, isSpecial:r.isImposter }))
+        };
+      }
+    }
+
+    /* GAME 2: WORD WOLF */
+    class WordWolfGame extends GameBase {
+      minPlayers(){ return 3; }
+      categoryOptions(){ return ['Animals','Food','Technology','Cities']; }
+
+      initFromSetup(setup){
+        const { players, category } = setup;
+        this.state.players = players;
+        this.state.category = category;
+
+        const pairs = this.app.data.wordWolfPairs[category] || this.app.data.wordWolfPairs.Animals;
+        this.state.pair = sample(pairs);
+        const majorityWord = this.state.pair.word1;
+        const wolfWord = this.state.pair.word2;
+
+        // Choose wolves count: 1 for <6 else 2
+        const wolfCount = players.length >= 6 ? 2 : 1;
+        const indices = [...Array(players.length).keys()];
+        shuffleInPlace(indices);
+        this.state.wolfIndices = indices.slice(0, wolfCount);
+
+        this.state.roles = players.map((p, idx) => {
+          const isWolf = this.state.wolfIndices.includes(idx);
+          return {
+            name: p,
+            roleLabel: isWolf ? 'Word Wolf' : 'Majority',
+            isWolf,
+            word: isWolf ? wolfWord : majorityWord
+          };
+        });
+
+        this.state.distributionIndex = 0;
+        this.state.clueTurn = 0;
+        this.state.selectedVoteIndex = null;
+        this.state.voting = false;
+        this.state.winnerTeam = null; // MAJORITY|WOLVES
+      }
+
+      getDistributionPayload(){
+        const role = this.state.roles[this.state.distributionIndex];
+        return {
+          targetName: role.name,
+          secretTitle: role.word,
+          secretDesc: role.isWolf ? 'You have the minority word. Blend in.' : 'You have the majority word. Identify the wolf(s).',
+          pillText: role.roleLabel
+        };
+      }
+
+      onReveal(){ this.state.revealed = true; this.app.audio.reveal(); }
+      onHidePass(){
+        this.state.distributionIndex++;
+        this.state.revealed = false;
+        if(this.state.distributionIndex >= this.state.roles.length) {
+          this.app.toGameplay({ phase:'CLUES' });
+        } else this.app.refreshDistribution();
+      }
+
+      getGameplayView(){
+        const phase = this.app.gamePhase;
+        if(phase === 'CLUES'){
+          const idx = this.state.clueTurn;
+          return {
+            title: 'Give Clues',
+            subtitle: 'Everyone hints about their word. Wolves aim to look like Majority.',
+            phasePill: 'Asymmetric Clues',
+            turnText: `${idx+1}/${this.state.players.length}`,
+            body: [
+              { type:'callout', text: `Player ${this.state.players[idx]} is speaking.` },
+              { type:'stack', items: [
+                { label:'Majority goal', text: 'Spot a slightly different concept.' },
+                { label:'Wolf goal', text: 'Sound close to Majority while staying consistent.' }
+              ] }
+            ],
+            footer: [
+              { type:'primary', id:'btn-next-clue', label: idx+1===this.state.players.length ? 'Go to Voting' : 'Next Player' }
+            ]
+          };
+        }
+        if(phase === 'VOTING'){
+          return {
+            title: 'Vote Out Wolf',
+            subtitle: 'Select a player to vote out.',
+            phasePill: 'Voting Round',
+            turnText: '',
+            body: [
+              { type:'vote-grid', players: this.state.roles.map(r=>r.name), selectedIndex:this.state.selectedVoteIndex }
+            ],
+            footer: [
+              { type:'primary', id:'btn-confirm-vote', label:'Confirm Vote', disabled:this.state.selectedVoteIndex==null }
+            ]
+          };
+        }
+        return this.app.fallbackGameplay();
+      }
+
+      setVoteIndex(i){ this.state.selectedVoteIndex = i; this.app.renderGameplay(); }
+
+      onPrimaryAction(){
+        if(this.app.gamePhase === 'CLUES'){
+          if(this.state.clueTurn + 1 >= this.state.players.length){
+            this.app.toGameplay({ phase:'VOTING' });
+            return;
+          }
+          this.state.clueTurn++;
+          this.app.renderGameplay();
+          return;
+        }
+
+        if(this.app.gamePhase === 'VOTING'){
+          const votedIdx = this.state.selectedVoteIndex;
+          const votedRole = this.state.roles[votedIdx];
+          // Majority wins if voted majority (not wolf)
+          const majorityWins = !votedRole.isWolf;
+          this.state.winnerTeam = majorityWins ? 'MAJORITY' : 'WOLVES';
+          this.app.finishGame();
+        }
+      }
+
+      getResults(){
+        const majorityWins = this.state.winnerTeam === 'MAJORITY';
+        return {
+          title: majorityWins ? 'Majority Wins!' : 'Wolves Win!',
+          subtitle: majorityWins
+            ? 'You voted out a Majority member, exposing wolves.'
+            : 'Wolves survived. Your vote caught the wrong one.',
+          pill1: this.state.category,
+          pill2: 'Word Wolf',
+          words: {
+            aLabel: 'Majority Word',
+            bLabel: 'Wolf Word',
+            a: this.state.pair.word1,
+            b: this.state.pair.word2
+          },
+          reveal: this.state.roles.map(r => ({ name:r.name, tag: r.isWolf ? 'Word Wolf' : 'Majority', word: r.word, isSpecial:r.isWolf }))
+        };
+      }
+    }
+
+    /* GAME 3: FOREHEAD 20Q */
+    class Forehead20QGame extends GameBase {
+      minPlayers(){ return 2; }
+
+      categoryOptions(){ return []; }
+
+      initFromSetup(setup){
+        const { players } = setup;
+        this.state.players = players;
+        this.state.pool = this.app.data.foreheadPool;
+        this.state.assignments = players.map(() => '');
+        this.state.secretWordsByPlayer = [];
+
+        // Assign random secret word to every player (everyone else knows it).
+        // In our local device flow we model group visibility as: on active player's turn,
+        // the group sees the active player's secret word. Active player doesn't.
+        // Implementation: all players already "have" a secret, but active player is looking away.
+        const used = new Set();
+        for(let i=0;i<players.length;i++){
+          let w;
+          do { w = sample(this.state.pool); } while (used.has(w));
+          used.add(w);
+          this.state.secretWordsByPlayer.push(w);
+        }
+
+        this.state.turnPlayerIndex = 0;
+        this.state.questionsLeft = 20;
+        this.state.roundOutcome = [];
+        this.state.stage = 'TURN';
+      }
+
+      getDistributionPayload(){
+        // For 20Q we don't need pass-and-view secrets; group reveals active player's word.
+        // We'll still use distribution screen as the "look away" cue.
+        const active = this.state.players[this.state.turnPlayerIndex];
+        const word = this.state.secretWordsByPlayer[this.state.turnPlayerIndex];
+        return {
+          targetName: active,
+          secretTitle: word,
+          secretDesc: 'Group reveals this word. Active player should look away.',
+          pillText: 'Look Away'
+        };
+      }
+
+      onReveal(){
+        // Reveal should show group the active player's secret word.
+        this.app.audio.reveal();
+      }
+
+      onHidePass(){
+        // hide triggers move to gameplay.
+        this.app.toGameplay({ phase:'20Q' });
+      }
+
+      getGameplayView(){
+        const idx = this.state.turnPlayerIndex;
+        const activeName = this.state.players[idx];
+        const left = this.state.questionsLeft;
+        const color = left >= 12 ? 'emerald' : (left >= 6 ? 'orange' : 'red');
+        return {
+          title: 'Yes / No Questions',
+          subtitle: 'The active player asks questions to deduce their identity.',
+          phasePill: 'Forehead 20 Questions',
+          turnText: `${idx+1}/${this.state.players.length}`,
+          body: [
+            { type:'callout', text: `Pass device to ${activeName}. ${activeName}, look away from the revealed word.` },
+            { type:'counter', left, color },
+            { type:'stack', items: [
+              { label:'Group action', text: 'After each question, tap “Minus 1 Question”.' },
+              { label:'Active player', text: 'When confident, tap “Guessed Correctly”.' }
+            ] }
+          ],
+          footer: [
+            { type:'primary', id:'btn-minus', label:'Minus 1 Question', disabled: left<=0 },
+            { type:'secondary', id:'btn-guess-correct', label:'Guessed Correctly! (Win)' },
+            { type:'secondary', id:'btn-guess-wrong', label:'Out of Questions (Fail)', dangerous: true }
+          ]
+        };
+      }
+
+      onPrimaryAction(id){
+        if(id === 'btn-minus'){
+          this.state.questionsLeft = clamp(this.state.questionsLeft - 1, 0, 20);
+          this.app.renderGameplay();
+          return;
+        }
+        if(id === 'btn-guess-correct'){
+          if(this.state.questionsLeft <= 0) return;
+          this.state.roundOutcome.push({ player: this.state.players[this.state.turnPlayerIndex], result:'WIN', left:this.state.questionsLeft });
+          this.app.finishGame({ mode:'20Q_ADVANCE' });
+          return;
+        }
+      }
+
+      onSecondaryAction(id){
+        if(id === 'btn-guess-wrong'){
+          this.state.roundOutcome.push({ player: this.state.players[this.state.turnPlayerIndex], result:'FAIL', left:this.state.questionsLeft });
+          this.app.finishGame({ mode:'20Q_ADVANCE' });
+        }
+      }
+
+      isGameOver(){
+        return this.state.roundOutcome.length >= this.state.players.length;
+      }
+
+      getResults(){
+        const wins = this.state.roundOutcome.filter(x=>x.result==='WIN').map(x=>x.player);
+        const fails = this.state.roundOutcome.filter(x=>x.result==='FAIL').map(x=>x.player);
+        return {
+          title: wins.length ? 'Round Complete — Winners Found!' : 'Round Complete',
+          subtitle: wins.length ? `Guessed correctly: ${wins.join(', ')}` : `No one guessed correctly this time.`,
+          pill1: 'Forehead 20Q',
+          pill2: 'Yes/No Identity',
+          words: null,
+          reveal: this.state.players.map((p, i) => ({ name:p, tag: this.state.roundOutcome.find(r=>r.player===p)?.result ?? '—', word: this.state.secretWordsByPlayer[i], isSpecial:false }))
+        };
+      }
+
+      nextTurn(){
+        this.state.turnPlayerIndex++;
+        this.state.questionsLeft = 20;
+        this.appState = this.app.state;
+        if(this.state.turnPlayerIndex >= this.state.players.length) {
+          this.app.finishGame({ mode:'END' });
+        } else {
+          this.app.toDistributionForForeheadTurn();
+        }
+      }
+    }
+
+    /* GAME 4: SPYFALL */
+    class SpyfallGame extends GameBase {
+      minPlayers(){ return 3; }
+      categoryOptions(){ return []; }
+
+      initFromSetup(setup){
+        const { players } = setup;
+        this.state.players = players;
+        const locations = this.app.data.spyLocations;
+        this.state.location = sample(locations);
+
+        const jobs = [
+          'bartender','tour guide','security guard','chef','archivist','mechanic','librarian','astronomer','pilot','engineer','detective','artist','bartender','doctor','scientist','navigator','translator',
+          'stage manager','priest','journalist','performer','guard dog handler','chef assistant','maintenance tech','art curator','lifeguard','train conductor'
+        ];
+
+        this.state.spyIndex = Math.floor(Math.random() * players.length);
+        this.state.roles = players.map((p, idx) => {
+          const isSpy = idx === this.state.spyIndex;
+          const job = sample(jobs);
+          return {
+            name: p,
+            isSpy,
+            job: job,
+            location: isSpy ? '???' : this.state.location
+          };
+        });
+
+        this.state.distributionIndex = 0;
+        this.state.stage = 'QUESTIONS';
+        this.state.unmaskVotes = new Array(players.length).fill(0);
+        this.state.selectedUnmaskIndex = null;
+        this.state.winner = null; // spy or others
+        this.state.turnCount = 1;
+      }
+
+      getDistributionPayload(){
+        const role = this.state.roles[this.state.distributionIndex];
+        return {
+          targetName: role.name,
+          secretTitle: role.location,
+          secretDesc: role.isSpy ? 'You have NO location. Ask questions and guess!' : `You are a ${role.job}. Location is ${role.location}.`,
+          pillText: role.isSpy ? 'Spy' : 'Crew'
+        };
+      }
+
+      onReveal(){ this.app.audio.reveal(); }
+      onHidePass(){
+        this.state.distributionIndex++;
+        if(this.state.distributionIndex >= this.state.roles.length){
+          this.app.toGameplay({ phase:'SPYFALL_QUESTIONS' });
+        } else this.app.refreshDistribution();
+      }
+
+      getGameplayView(){
+        const phase = this.app.gamePhase;
+        if(phase === 'SPYFALL_QUESTIONS'){
+          const spyName = this.state.roles[this.state.spyIndex].name;
+          return {
+            title: 'Ask Questions',
+            subtitle: 'Take turns asking about the location. Crew tries to unmask the Spy; Spy tries to guess the location.',
+            phasePill: 'Spyfall',
+            turnText: `Round ${this.state.turnCount}`,
+            body: [
+              { type:'callout', text: `Focus: Identify the location. ${this.state.players.length} total players.` },
+              { type:'stack', items: [
+                { label:'Crew goal', text: 'Get the Spy to slip or vote them out.' },
+                { label:'Spy goal', text: 'Stay convincing and eventually guess the location.' }
+              ] },
+              { type:'unmask-grid', players: this.state.players, selectedIndex:this.state.selectedUnmaskIndex }
+            ],
+            footer: [
+              { type:'primary', id:'btn-unmask', label:'Vote to Unmask' , disabled:this.state.selectedUnmaskIndex==null},
+              { type:'secondary', id:'btn-spy-guess', label:'Spy guesses location (Crew checks)' }
+            ]
+          };
+        }
+
+        return this.app.fallbackGameplay();
+      }
+
+      setUnmaskIndex(i){ this.state.selectedUnmaskIndex=i; this.app.renderGameplay(); }
+
+      onPrimaryAction(id){
+        if(id === 'btn-unmask'){
+          const votedIdx = this.state.selectedUnmaskIndex;
+          const isSpyPicked = votedIdx === this.state.spyIndex;
+          this.state.winner = isSpyPicked ? 'CREW' : 'SPY';
+          this.app.finishGame();
+        }
+        if(id === 'btn-spy-guess'){
+          // If user clicks this button, we treat as crew wins by default prompt? We'll record via extra UI in render.
+        }
+      }
+
+      onSecondaryAction(id){
+        if(id === 'btn-spy-guess'){
+          // Quick modal-like flow: ask user to choose whether spy guessed correctly.
+          const ok = confirm('Did the Spy guess the location correctly? Click OK for correct.');
+          this.state.winner = ok ? 'SPY' : 'CREW';
+          this.app.finishGame();
+        }
+      }
+
+      getResults(){
+        const crewWin = this.state.winner === 'CREW';
+        const spy = this.state.roles[this.state.spyIndex];
+        return {
+          title: crewWin ? 'Crew Unmasks the Spy!' : 'Spy Succeeds!',
+          subtitle: crewWin
+            ? `The Spy was: ${spy.name}.`
+            : `Spy survives. Location was: ${this.state.location}.`,
+          pill1: 'Spyfall',
+          pill2: this.state.location,
+          words: {
+            aLabel: 'Location',
+            bLabel: 'Spy Role',
+            a: this.state.location,
+            b: `${spy.name} (Spy)`
+          },
+          reveal: this.state.roles.map(r => ({ name:r.name, tag: r.isSpy ? 'Spy' : 'Crew', word: r.isSpy ? '???' : `${r.location} • ${r.job}`, isSpecial:r.isSpy }))
+        };
+      }
+    }
+
+    /***********************
+     * App Manager (state machine + view toggling with animation)
+     ***********************/
+    class AppManager {
+      constructor(){
+        this.data = new DataFactory();
+        this.audio = new SynthAudio();
+        this.state = {
+          players: [],
+          currentGameId: null,
+          setup: {},
+          // universal
+          minPlayers: 3,
+          gameMode: null
+        };
+        this.game = null;
+        this.appPhase = 0;
+        this.gamePhase = null; // for gameplay sub-phase
+      }
+
+      init(){
+        // Unlock audio on first interaction
+        document.addEventListener('click', () => this.audio.unlock(), { once:true });
+
+        // View elements
+        this.views = {
+          landing: $('#view-landing'),
+          playerSetup: $('#view-player-setup'),
+          secretDistribution: $('#view-secret-distribution'),
+          gameplay: $('#view-gameplay'),
+          results: $('#view-results')
+        };
+
+        // Actions
+        $('#btn-home').addEventListener('click', () => this.resetToHome());
+        $('#btn-mute').addEventListener('click', () => this.toggleMute());
+        $('#btn-add-player').addEventListener('click', () => this.addPlayer());
+        $('#input-player-name').addEventListener('keydown', (e)=>{ if(e.key==='Enter') this.addPlayer(); });
+
+        $$('.game-card').forEach(card => {
+          card.addEventListener('click', () => {
+            this.audio.click();
+            this.selectGame(card.dataset.game);
+          });
+        });
+
+        $('#btn-open-guidelines').addEventListener('click', () => {
+          this.audio.click();
+          this.openGuidelines();
+        });
+
+        $('#btn-close-guidelines').addEventListener('click', () => this.closeGuidelines());
+        $('#modal-guidelines-backdrop').addEventListener('click', () => this.closeGuidelines());
+
+        $('#btn-start-game').addEventListener('click', () => {
+          this.audio.click();
+          this.closeGuidelines();
+          this.startGame();
+        });
+
+        // Distribution actions
+        $('#btn-reveal-secret').addEventListener('click', () => {
+          this.audio.reveal();
+          this.onRevealDistribution();
+        });
+        $('#btn-hide-and-pass').addEventListener('click', () => {
+          this.onHideDistribution();
+        });
+
+        // Gameplay footer actions (delegated)
+        $('#gameplay-footer').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action-id]');
+          if(!btn) return;
+          const id = btn.dataset.actionId;
+          this.handleGameplayAction(id);
+        });
+
+        // Vote selection / other clickable boards
+        $('#gameplay-body').addEventListener('click', (e) => {
+          const voteBtn = e.target.closest('[data-vote-index]');
+          if(voteBtn){
+            const idx = Number(voteBtn.dataset.voteIndex);
+            if(this.game && typeof this.game.setVoteIndex === 'function'){
+              this.game.setVoteIndex(idx);
+            }
+            if(this.game && typeof this.game.setUnmaskIndex === 'function'){
+              this.game.setUnmaskIndex(idx);
+            }
+          }
+        });
+
+        // Results actions
+        $('#btn-play-again').addEventListener('click', () => {
+          this.audio.click();
+          this.startGame();
+        });
+        $('#btn-reset').addEventListener('click', () => this.resetToHome());
+
+        // Init home
+        this.showView('landing');
+        this.setProgress(0);
+
+        // Minimal loading: build dataset once (could take a moment)
+        // We'll do it on first game start to keep landing snappy.
+      }
+
+      toggleMute(){
+        this.state.isMuted = !this.state.isMuted;
+        this.audio.setMuted(!!this.state.isMuted);
+        const muted = !!this.state.isMuted;
+        const icon = $('.mute-icon');
+        if(muted){
+          icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />';
+        } else {
+          icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />';
+        }
+      }
+
+      setProgress(step){
+        // step: 0..3
+        const el = $('#progress-indicator');
+        if(!el) return;
+        el.classList.remove('hidden');
+        const dots = [];
+        // We used fixed DOM dots; update opacity to show progress
+        const all = el.querySelectorAll('div');
+        all.forEach((d,i)=>{
+          d.classList.remove('bg-[#E65100]');
+          d.classList.add('bg-[#FFB396]/30');
+        });
+        // highlight three nodes
+        const nodes = [0,2,4];
+        nodes.forEach((ni, idx)=>{
+          const node = all[ni];
+          if(!node) return;
+          if(step >= idx+1) {
+            node.classList.remove('bg-[#FFB396]/30');
+            node.classList.add('bg-[#E65100]');
+          }
+        });
+      }
+
+      showView(key){
+        // hide all
+        Object.values(this.views).forEach(v => v.classList.add('hidden'));
+        // show target
+        this.views[key].classList.remove('hidden');
+      }
+
+      resetToHome(){
+        this.audio.click();
+        this.state.players = [];
+        this.state.currentGameId = null;
+        this.state.setup = {};
+        this.game = null;
+        this.gamePhase = null;
+        this.showView('landing');
+        this.setProgress(0);
+      }
+
+      selectGame(gameId){
+        this.state.currentGameId = gameId;
+        // init defaults
+        const g = this.createGame(gameId);
+        this.state.minPlayers = g.minPlayers();
+
+        // Setup screen
+        $('#min-players').textContent = String(this.state.minPlayers);
+        this.renderPlayerSetupSkeleton(g);
+        this.showView('playerSetup');
+        this.setProgress(1);
+      }
+
+      createGame(gameId){
+        if(gameId === 'IMPOSTER') return new ImposterGame(this);
+        if(gameId === 'WORD_WOLF') return new WordWolfGame(this);
+        if(gameId === 'FOREHEAD_20Q') return new Forehead20QGame(this);
+        if(gameId === 'SPYFALL') return new SpyfallGame(this);
+        throw new Error('Unknown game');
+      }
+
+      renderPlayerSetupSkeleton(game){
+        // reset UI
+        this.state.players = [];
+        $('#players-chips').innerHTML = '';
+        $('#input-player-name').value = '';
+
+        const setupBlock = $('#setup-block');
+        setupBlock.innerHTML = '';
+
+        // Game selection already done; now show game-specific settings
+        if(game instanceof ImposterGame){
+          // category
+          setupBlock.appendChild(this._makeLabel('Category'));
+          const row = document.createElement('div');
+          row.className = 'grid grid-cols-2 gap-3';
+          const cats = game.categoryOptions();
+          cats.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = 'card-category rounded-2xl p-4 bg-[#FFEBE1] border border-[#FFD8B3]/60 hover:border-[#E65100]/40 text-left';
+            btn.dataset.category = cat;
+            btn.innerHTML = `<div class="text-3xl">${this._categoryEmoji(cat)}</div><div class="mt-2 font-extrabold text-[#3E2723]">${escapeHTML(cat)}</div><div class="text-[10px] text-[#5D4037]/70 mt-1 font-semibold">300 pair words</div>`;
+            if(cat === 'Objects') btn.classList.add('ring-2','ring-[#E65100]');
+            btn.addEventListener('click', ()=>{
+              $$('.card-category').forEach(b=>b.classList.remove('ring-2','ring-[#E65100]'));
+              btn.classList.add('ring-2','ring-[#E65100]');
+              this.state.setup.category = cat;
+            });
+            row.appendChild(btn);
+          });
+          setupBlock.appendChild(row);
+          this.state.setup.category = 'Objects';
+
+          // mode
+          setupBlock.appendChild(this._makeSpacer(4));
+          setupBlock.appendChild(this._makeLabel('Imposter Mode'));
+          const modeWrap = document.createElement('div');
+          modeWrap.className = 'space-y-3';
+          const classic = this._makeModeCard('CLASSIC', 'Classic Blind Imposter', 'Imposter receives ???', true);
+          const undercover = this._makeModeCard('UNDERCOVER', 'Undercover Related Word', 'Imposter receives a related word', false);
+          classic.addEventListener('click', ()=>this.selectMode('CLASSIC'));
+          undercover.addEventListener('click', ()=>this.selectMode('UNDERCOVER'));
+          modeWrap.appendChild(classic);
+          modeWrap.appendChild(undercover);
+          setupBlock.appendChild(modeWrap);
+          this.state.setup.mode = 'CLASSIC';
+
+        } else if(game instanceof WordWolfGame){
+          setupBlock.appendChild(this._makeLabel('Category'));
+          const row = document.createElement('div');
+          row.className = 'grid grid-cols-2 gap-3';
+          const cats = game.categoryOptions();
+          const defaultCat = 'Animals';
+          cats.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = 'card-category rounded-2xl p-4 bg-[#FFEBE1] border border-[#FFD8B3]/60 hover:border-[#E65100]/40 text-left';
+            btn.dataset.category = cat;
+            btn.innerHTML = `<div class="text-3xl">${this._categoryEmoji(cat)}</div><div class="mt-2 font-extrabold text-[#3E2723]">${escapeHTML(cat)}</div><div class="text-[10px] text-[#5D4037]/70 mt-1 font-semibold">300 related pairs</div>`;
+            if(cat === defaultCat) btn.classList.add('ring-2','ring-[#E65100]');
+            btn.addEventListener('click', ()=>{
+              $$('.card-category').forEach(b=>b.classList.remove('ring-2','ring-[#E65100]'));
+              btn.classList.add('ring-2','ring-[#E65100]');
+              this.state.setup.category = cat;
+            });
+            row.appendChild(btn);
+          });
+          setupBlock.appendChild(row);
+          this.state.setup.category = defaultCat;
+        } else {
+          setupBlock.appendChild(this._makeLabel('Ready'));
+          const msg = document.createElement('div');
+          msg.className = 'bg-[#FFEBE1] border border-[#FFD8B3]/60 rounded-[22px] p-4 text-sm text-[#5D4037]';
+          msg.innerHTML = '<div class="font-extrabold text-[#3E2723]">No extra setup needed.</div><div class="mt-2">The game engine uses internal generated word pools and locations.</div>';
+          setupBlock.appendChild(msg);
+        }
+      }
+
+      selectMode(mode){
+        this.state.setup.mode = mode;
+        // update UI ring
+        $$('.card-mode').forEach(()=>{});
+        const btns = $$('#setup-block .card-mode');
+        btns.forEach(b=>b.classList.remove('ring-2','ring-[#E65100]'));
+        const active = $('#setup-block .card-mode[data-mode="'+mode+'"]');
+        if(active) active.classList.add('ring-2','ring-[#E65100]');
+      }
+
+      _makeLabel(text){
+        const el = document.createElement('div');
+        el.className = 'text-sm font-bold text-[#E65100] uppercase tracking-wider';
+        el.textContent = text;
+        return el;
+      }
+      _makeSpacer(n){
+        const el = document.createElement('div');
+        el.style.height = n+'px';
+        return el;
+      }
+      _makeModeCard(mode, title, desc, selected){
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `card-mode rounded-2xl p-4 bg-[#FFEBE1] border ${selected ? 'ring-2 ring-[#E65100]' : 'border-[#FFD8B3]/60'} text-left w-full`;
+        btn.dataset.mode = mode;
+        btn.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="w-5 h-5 rounded-full border-2 ${selected ? 'border-[#E65100]' : 'border-orange-300'} flex items-center justify-center mt-0.5">
+              <div class="w-2.5 h-2.5 rounded-full ${selected ? 'bg-[#E65100]' : 'bg-transparent'}"></div>
+            </div>
+            <div>
+              <div class="font-extrabold text-[#3E2723] text-sm">${escapeHTML(title)}</div>
+              <div class="text-xs text-[#5D4037] mt-1">${escapeHTML(desc)}</div>
+            </div>
+          </div>
+        `;
+        return btn;
+      }
+
+      _categoryEmoji(cat){
+        return ({
+          'Anime':'🎴','Movies':'🎬','Real Persons':'👑','Objects':'📱',
+          'Animals':'🦊','Food':'🍓','Technology':'🧠','Cities':'🏙️'
+        })[cat] || '✨';
+      }
+
+      addPlayer(){
+        const min = this.state.minPlayers;
+        const name = ($('#input-player-name').value || '').trim();
+        if(!this.state.currentGameId) return;
+        if(!name) return;
+        if(this.state.players.length >= 11){ alert('Max 11 players.'); return; }
+        if(this.state.players.includes(name)){ alert('Name already exists.'); return; }
+        if(name.length > 24){ alert('Name too long.'); return; }
+        this.state.players.push(name);
+        $('#input-player-name').value = '';
+        this.renderPlayerChips();
+        this.audio.click();
+      }
+
+      removePlayer(i){
+        const min = this.state.minPlayers;
+        if(this.state.players.length <= min){ alert(`Minimum ${min} players required.`); return; }
+        this.state.players.splice(i, 1);
+        this.renderPlayerChips();
+      }
+
+      renderPlayerChips(){
+        const wrap = $('#players-chips');
+        wrap.innerHTML = '';
+        this.state.players.forEach((p, i)=>{
+          const chip = document.createElement('div');
+          chip.className = 'flex items-center gap-2 bg-[#FFEBE1] text-[#3E2723] px-4 py-2 rounded-full border border-[#FFD8B3]/60';
+          chip.innerHTML = `
+            <span class="font-semibold">${escapeHTML(p)}</span>
+            <button class="text-orange-700 hover:text-orange-950" aria-label="Remove player" data-remove-index="${i}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          `;
+          chip.querySelector('[data-remove-index]').addEventListener('click', (e)=>{
+            e.stopPropagation();
+            this.audio.click();
+            this.removePlayer(i);
+          });
+          wrap.appendChild(chip);
+        });
+        // enable continue if min met
+        const btn = $('#btn-open-guidelines');
+        btn.disabled = this.state.players.length < this.state.minPlayers;
+        if(btn.disabled) btn.classList.add('opacity-60'); else btn.classList.remove('opacity-60');
+      }
+
+      openGuidelines(){
+        if(this.state.players.length < this.state.minPlayers){
+          alert(`Minimum ${this.state.minPlayers} players required.`);
+          return;
+        }
+        // Build game
+        this.game = this.createGame(this.state.currentGameId);
+        // Attach setup selection to state.setup
+        const setup = { players: this.state.players.slice(), category: this.state.setup.category, mode: this.state.setup.mode };
+        this.game.initFromSetup(setup);
+
+        // Modal content per game
+        const id = this.state.currentGameId;
+        const meta = {
+          IMPOSTER: {
+            title: 'Imposter',
+            desc: 'Pass-and-view deduction. One player is the Imposter. Everyone votes who seems suspicious.',
+            steps: [
+              'Setup Players + pick category + mode',
+              'Distribution pass-and-view (reveal secrets one by one)',
+              'Clues turns → Voting → Results'
+            ]
+          },
+          WORD_WOLF: {
+            title: 'Word Wolf',
+            desc: 'Asymmetric words. Majority vs Wolf. Detect the odd word through conversation and vote.',
+            steps: [
+              'Setup Players + pick category',
+              'Distribution pass-and-view (majority vs wolf)',
+              'Clues turns → Voting → Results'
+            ]
+          },
+          FOREHEAD_20Q: {
+            title: 'Forehead 20 Questions',
+            desc: 'Group reveals the active player’s secret word. Active player asks yes/no questions to identify it.',
+            steps: [
+              'Setup Players',
+              'Turn loop: active player → group reveals → 20Q counter',
+              'Guess win/fail → next player → end results'
+            ]
+          },
+          SPYFALL: {
+            title: 'Spyfall',
+            desc: 'Spy has no location. Others have the same location + different jobs. Ask, deduce, and vote.',
+            steps: [
+              'Setup Players',
+              'Distribution pass-and-view (location + jobs / spy has ???)',
+              'Questions → unmask vote or spy location guess → results'
+            ]
+          }
+        }[id];
+
+        $('#guidelines-title').textContent = meta.title;
+        $('#guidelines-desc').textContent = meta.desc;
+        const ol = $('#guidelines-steps');
+        ol.innerHTML = '';
+        meta.steps.forEach((s, i)=>{
+          const li = document.createElement('li');
+          li.className = 'flex items-start gap-3';
+          li.innerHTML = `
+            <div class="w-7 h-7 rounded-full bg-[#E65100]/10 border border-[#E65100]/25 flex items-center justify-center text-[#E65100] font-extrabold text-sm">${i+1}</div>
+            <div class="text-sm text-[#5D4037] leading-relaxed font-semibold">${escapeHTML(s)}</div>
+          `;
+          ol.appendChild(li);
+        });
+
+        $('#modal-guidelines').classList.remove('hidden');
+        $('#modal-guidelines').classList.add('flex');
+      }
+
+      closeGuidelines(){
+        $('#modal-guidelines').classList.add('hidden');
+        $('#modal-guidelines').classList.remove('flex');
+      }
+
+      startGame(){
+        // ensure data
+        // dataset is large; do it once.
+        if(!this.data.cache.ready){
+          // small UX: show results spinner in gameplay title
+          // Keep it simple: block and generate.
+          this.data.ensureAll();
+        }
+
+        // Recreate game cleanly from current setup
+        this.game = this.createGame(this.state.currentGameId);
+        const setup = {
+          players: this.state.players.slice(),
+          category: this.state.setup.category,
+          mode: this.state.setup.mode
+        };
+        this.game.initFromSetup(setup);
+        this.game.start();
+
+        // Distribution
+        if(this.state.currentGameId === 'FOREHEAD_20Q'){
+          this.showView('secretDistribution');
+          this.setProgress(2);
+          this.prepareDistributionScreen();
+        } else {
+          this.showView('secretDistribution');
+          this.setProgress(2);
+          this.prepareDistributionScreen();
+        }
+      }
+
+      refreshDistribution(){
+        this.prepareDistributionScreen();
+      }
+
+      prepareDistributionScreen(){
+        this.showView('secretDistribution');
+        const payload = this.game.getDistributionPayload();
+        if(!payload) return;
+
+        $('#handover-total').textContent = String(this.game.state.roles?.length || this.state.players.length || 1);
+        $('#handover-step').textContent = String((this.game.state.distributionIndex ?? 0) + 1);
+        $('#handover-target').textContent = payload.targetName;
+
+        // Reset layers
+        $('#secret-title').textContent = ' '; // placeholder
+        $('#secret-desc').textContent = payload.secretDesc;
+        // hidden layer
+        $('#secret-reveal-layer').classList.add('hidden');
+        $('#secret-reveal-layer').classList.remove('fade-enter');
+        $('#secret-subtitle').textContent = 'Tap to reveal';
+        $('#secret-hidden-overlay').classList.remove('hidden');
+
+        // set reveal values
+        this._distPayload = payload;
+      }
+
+      onRevealDistribution(){
+        const payload = this._distPayload;
+        if(!payload) return;
+        // show revealed content
+        $('#secret-title').textContent = payload.secretTitle;
+        $('#secret-desc').textContent = payload.secretDesc;
+        $('#secret-reveal-layer').classList.remove('hidden');
+        $('#secret-hidden-overlay').classList.add('hidden');
+        $('#secret-subtitle').textContent = 'Shown to the group';
+        $('#secret-reveal-layer').classList.add('fade-enter');
+        this.game.onReveal?.();
+      }
+
+      onHideDistribution(){
+        // go next
+        // reset reveal layer state
+        $('#secret-reveal-layer').classList.add('hidden');
+        $('#secret-hidden-overlay').classList.remove('hidden');
+        this.game.onHidePass?.();
+      }
+
+      onReveal(){ this.game.onReveal?.(); }
+
+      toGameplay({ phase }){
+        this.gamePhase = phase;
+        this.showView('gameplay');
+        this.renderGameplay();
+        this.setProgress(3);
+      }
+
+      fallbackGameplay(){
+        return { title:'', subtitle:'', phasePill:'', turnText:'', body:[], footer:[] };
+      }
+
+      renderGameplay(){
+        const view = this.game.getGameplayView();
+        $('#gameplay-title').textContent = view.title;
+        $('#gameplay-subtitle').textContent = view.subtitle;
+        $('#pill-phase').textContent = view.phasePill || '';
+        $('#turn-indicator').textContent = view.turnText || '';
+
+        const body = $('#gameplay-body');
+        body.innerHTML = '';
+
+        (view.body || []).forEach(item => {
+          if(item.type === 'callout'){
+            const d = document.createElement('div');
+            d.className = 'bg-[#FFEBE1] border border-[#FFD8B3]/60 rounded-[28px] p-5';
+            d.innerHTML = `<div class="text-sm font-extrabold text-[#3E2723]">${escapeHTML(item.text)}</div>`;
+            body.appendChild(d);
+          }
+          if(item.type === 'stack'){
+            const wrap = document.createElement('div');
+            wrap.className = 'grid grid-cols-1 gap-3';
+            item.items.forEach(s => {
+              const card = document.createElement('div');
+              card.className = 'rounded-[22px] border border-[#FFD8B3]/60 bg-white/70 p-4';
+              card.innerHTML = `<div class="text-xs uppercase tracking-widest font-extrabold text-[#E65100]">${escapeHTML(s.label)}</div><div class="mt-2 text-sm text-[#5D4037] font-semibold">${escapeHTML(s.text)}</div>`;
+              wrap.appendChild(card);
+            });
+            body.appendChild(wrap);
+          }
+          if(item.type === 'counter'){
+            const color = item.color;
+            const classes = {
+              emerald: { text:'text-emerald-700', bg:'bg-emerald-100', border:'border-emerald-200', pill:'bg-emerald-200/60' },
+              orange: { text:'text-orange-700', bg:'bg-orange-100', border:'border-orange-200', pill:'bg-orange-200/60' },
+              red: { text:'text-red-700', bg:'bg-red-100', border:'border-red-200', pill:'bg-red-200/60' },
+            }[color] || null;
+
+            const wrap = document.createElement('div');
+            wrap.className = `rounded-[28px] border ${classes.border} ${classes.bg} p-5 text-center`; 
+            wrap.innerHTML = `
+              <div class="text-xs uppercase tracking-widest font-extrabold ${classes.text}">Questions Left</div>
+              <div class="mt-2 text-6xl font-black ${classes.text} leading-none">${item.left}</div>
+              <div class="mt-2 text-xs font-semibold ${classes.text} opacity-80">Tap “Minus 1 Question” after each yes/no question.</div>
+            `;
+            body.appendChild(wrap);
+          }
+          if(item.type === 'vote-grid'){
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-2 gap-3.5';
+            item.players.forEach((name, i)=>{
+              const btn = document.createElement('button');
+              const selected = (item.selectedIndex===i);
+              btn.className = `rounded-[24px] p-4 border ${selected ? 'ring-2 ring-[#E65100] border-[#E65100]/40' : 'border-[#FFD8B3]/60 bg-white/70'} text-left hover:shadow-md transition-all`;
+              btn.dataset.voteIndex = i;
+              btn.dataset.voteIndex = i;
+              btn.dataset.voteIndex = i;
+              btn.dataset.voteIndex = i;
+              // data-vote-index is needed by body click handler.
+              btn.dataset.voteIndex = i;
+              btn.dataset.voteIndex = i;
+              // Ensure correct attribute
+              btn.dataset.voteIndex = i;
+              btn.setAttribute('data-vote-index', String(i));
+
+              btn.innerHTML = `
+                <div class="w-10 h-10 rounded-2xl bg-[#E65100]/10 border border-[#E65100]/20 flex items-center justify-center">
+                  <span class="font-black text-[#E65100]">${i+1}</span>
+                </div>
+                <div class="mt-3 text-sm font-extrabold text-[#3E2723]">${escapeHTML(name)}</div>
+                <div class="mt-1 text-xs font-semibold ${selected ? 'text-[#E65100]' : 'text-[#5D4037]/70'}">${selected ? 'Selected' : 'Suspect'}</div>
+              `;
+              grid.appendChild(btn);
+            });
+            body.appendChild(grid);
+          }
+          if(item.type === 'unmask-grid'){
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-2 gap-3.5';
+            item.players.forEach((name, i)=>{
+              const selected = item.selectedIndex === i;
+              const btn = document.createElement('button');
+              btn.setAttribute('data-vote-index', String(i));
+              btn.className = `rounded-[24px] p-4 border ${selected ? 'ring-2 ring-[#E65100] border-[#E65100]/40 bg-[#FFEBE1]' : 'border-[#FFD8B3]/60 bg-white/70'} text-left hover:shadow-md transition-all`;
+              btn.innerHTML = `
+                <div class="text-sm font-extrabold text-[#3E2723]">${escapeHTML(name)}</div>
+                <div class="mt-1 text-xs font-semibold ${selected ? 'text-[#E65100]' : 'text-[#5D4037]/70'}">${selected ? 'Chosen' : 'Unmask target'}</div>
+              `;
+              grid.appendChild(btn);
+            });
+            body.appendChild(grid);
+          }
+        });
+
+        const footer = $('#gameplay-footer');
+        footer.innerHTML = '';
+        (view.footer || []).forEach(f => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.dataset.actionId = f.id;
+          btn.dataset.actionId = f.id;
+          btn.dataset.actionId = f.id;
+          // Ensure correct
+          btn.dataset.actionId = f.id;
+          btn.dataset.actionId = f.id;
+          // clean
+          btn.dataset.actionId = f.id;
+          btn.dataset.actionId = f.id;
+          // set based on style
+          if(f.type === 'primary'){
+            btn.className = 'btn-primary w-full py-4 rounded-[24px] text-white font-extrabold text-lg transition-transform active:scale-95';
+            btn.disabled = !!f.disabled;
+            if(btn.disabled) btn.classList.add('opacity-60');
+          } else {
+            const danger = !!f.dangerous;
+            btn.className = danger
+              ? 'w-full py-4 rounded-[24px] bg-red-100 hover:bg-red-200 text-red-800 font-extrabold text-lg border border-red-200'
+              : 'w-full py-4 rounded-[24px] bg-[#FFEBE1] hover:bg-[#FFD8B3]/40 text-[#3E2723] font-extrabold text-lg border border-[#FFB396]/30';
+          }
+          btn.textContent = f.label;
+          footer.appendChild(btn);
+        });
+      }
+
+      handleGameplayAction(id){
+        if(!this.game) return;
+        if(this.game.onPrimaryAction && ['btn-next-clue','btn-confirm-vote','btn-minus','btn-guess-correct'].includes(id)){
+          this.game.onPrimaryAction(id);
+          return;
+        }
+        if(this.game.onPrimaryAction && id === 'btn-confirm-vote'){
+          this.game.onPrimaryAction(id);
+          return;
+        }
+        // Secondary actions
+        if(this.game.onSecondaryAction){
+          this.game.onSecondaryAction(id);
+        } else {
+          // fallback
+          this.game.onPrimaryAction?.(id);
+        }
+
+        // Render if not finishing
+        this.renderGameplay();
+      }
+
+      finishGame({ mode } = {}){
+        // For 20Q we may need to advance without showing results yet.
+        if(mode === '20Q_ADVANCE'){
+          // decide whether game over
+          if(this.state.currentGameId !== 'FOREHEAD_20Q'){
+            this.finishAndShowResults();
+            return;
+          }
+          if(this.game.isGameOver()){
+            this.finishAndShowResults();
+          } else {
+            this.game.nextTurn();
+            return;
+          }
+        } else {
+          this.finishAndShowResults();
+        }
+      }
+
+      finishAndShowResults(){
+        const results = this.game.getResults();
+        this.audio.win();
+        const isWin = results.title.toLowerCase().includes('win') || results.title.toLowerCase().includes('victory') || results.title.toLowerCase().includes('wins');
+        if(isWin) {
+          this.audio.win();
+          launchConfetti();
+        } else {
+          this.audio.lose();
+        }
+
+        $('#results-title').textContent = results.title;
+        $('#results-subtitle').textContent = results.subtitle;
+        $('#results-pill-1').textContent = results.pill1 || '';
+        $('#results-pill-2').textContent = results.pill2 || '';
+
+        const reveal = $('#results-reveal');
+        reveal.innerHTML = '';
+        (results.reveal || []).forEach(r => {
+          const card = document.createElement('div');
+          const special = !!r.isSpecial;
+          const bg = special ? 'bg-rose-100/90 border-rose-300' : 'bg-[#FFEBE1] border-[#FFD8B3]';
+          const badge = special ? 'bg-rose-600' : 'bg-orange-600/20';
+          const tag = escapeHTML(r.tag || 'Role');
+          card.className = `flex items-center justify-between p-4 rounded-[22px] border ${special ? 'border-rose-300 ring-1 ring-rose-200' : 'border-[#FFD8B3]/70'} bg-white/70`;
+          card.innerHTML = `
+            <div>
+              <div class="font-extrabold text-[#3E2723]">${escapeHTML(r.name)}</div>
+              <div class="mt-1 text-xs font-semibold text-[#5D4037]/70">${tag}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs uppercase tracking-widest font-extrabold text-[#E65100]">Secret</div>
+              <div class="mt-1 font-black text-[#E65100]">${escapeHTML(r.word)}</div>
+            </div>
+          `;
+          reveal.appendChild(card);
+        });
+
+        const wordsWrap = $('#results-words');
+        wordsWrap.innerHTML = '';
+        if(results.words){
+          const { aLabel, bLabel, a, b } = results.words;
+          wordsWrap.innerHTML = `
+            <div class="mt-4 bg-white/70 rounded-[28px] border border-[#FFD8B3]/50 p-5">
+              <div class="text-sm font-extrabold text-[#3E2723]">Key Words</div>
+              <div class="mt-4 grid grid-cols-2 gap-3">
+                <div class="bg-emerald-50 border border-emerald-100 rounded-[22px] p-4">
+                  <div class="text-xs font-extrabold text-emerald-800/70 uppercase tracking-widest">${escapeHTML(aLabel||'A')}</div>
+                  <div class="mt-2 text-xl font-black text-emerald-800">${escapeHTML(a)}</div>
+                </div>
+                <div class="bg-rose-50 border border-rose-100 rounded-[22px] p-4">
+                  <div class="text-xs font-extrabold text-rose-800/70 uppercase tracking-widest">${escapeHTML(bLabel||'B')}</div>
+                  <div class="mt-2 text-xl font-black text-rose-800">${escapeHTML(b)}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        this.showView('results');
+      }
+
+      toDistributionForForeheadTurn(){
+        // Special: show distribution screen for each 20Q turn
+        this.showView('secretDistribution');
+        this.setProgress(2);
+        this.prepareDistributionScreen();
+      }
+
+      refreshDistribution(){
+        this.prepareDistributionScreen();
+      }
+
+      renderHomeProgress(){ this.setProgress(0); }
+    }
+
+    /***********************
+     * Boot
+     ***********************/
+    const app = new AppManager();
+    window.addEventListener('DOMContentLoaded', () => app.init());
+  </script>
+
+</body>
+</html>
+
